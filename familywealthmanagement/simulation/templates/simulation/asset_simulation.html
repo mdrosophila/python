@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Asset Simulation{% endblock %}
+
+{% block head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    .chart { position: relative; height: 480px; }
+    table { border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { border: 1px solid #bbb; padding: 4px 10px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { background: #f0f0f0; }
+    .params { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .params label { display: flex; flex-direction: column; font-size: .9rem; gap: .2rem; }
+    input[type=number] { width: 7rem; padding: 3px; }
+    .alloc input[type=number] { width: 5rem; }
+    .errors { color: #b00020; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Asset Simulation</h1>
+  <p>Backtest how an allocation would have grown using historical annual returns, rebalanced to the target weights every year.</p>
+
+  <form method="get">
+    <div class="params">
+      <label>Starting amount ($)
+        <input type="number" name="initial" value="{{ initial }}" min="1" step="any">
+      </label>
+      <label>Start year ({{ first_year }}-{{ last_year }})
+        <input type="number" name="start" value="{{ start }}" min="{{ first_year }}" max="{{ last_year }}">
+      </label>
+      <label>Years
+        <input type="number" name="years" value="{{ years }}" min="1" max="{{ max_years }}">
+      </label>
+    </div>
+
+    <table class="alloc">
+      <thead><tr><th>Asset</th><th>Allocation (%)</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr><td>{{ r.name }}</td><td><input type="number" name="alloc_{{ r.index }}" value="{{ r.pct }}" min="0" max="100" step="any"></td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th>Total</th><td id="total">{{ total }}%</td></tr></tfoot>
+    </table>
+    <button type="submit">Run simulation</button>
+  </form>
+
+  {% if errors %}
+    <ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if result %}
+    <h2>Growth of ${{ initial }}</h2>
+    <div class="chart"><canvas id="chart"></canvas></div>
+
+    <h2>Results</h2>
+    <table>
+      <thead><tr><th></th><th>Ending value ($)</th><th>Annualized return (%)</th><th>Worst year (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
+      <tbody>
+        {% for s in result.summary %}
+          <tr><td>{% if s.name == 'Portfolio' %}<strong>Portfolio</strong>{% else %}{{ s.name }} (100%){% endif %}</td>
+              <td>{{ s.end_value|floatformat:"0g" }}</td><td>{{ s.cagr }}</td><td>{{ s.worst_year }}</td>
+              <td>{{ s.sigma }}</td><td>{% if s.beta is None %}n/a{% else %}{{ s.beta }}{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p>Sigma is the standard deviation of the yearly returns. Beta is measured against the S&amp;P 500 (includes dividends), which is 1 by definition; it needs at least 2 years.</p>
+
+    {{ result|json_script:"sim-data" }}
+    <script>
+      const sim = JSON.parse(document.getElementById('sim-data').textContent);
+      const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e6b800'];
+      let i = 0;
+      new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+          labels: sim.labels,
+          datasets: Object.entries(sim.series).map(([name, values]) => {
+            const isPortfolio = name === 'Portfolio';
+            const color = isPortfolio ? '#111' : colors[i++ % colors.length];
+            return {
+              label: isPortfolio ? 'Portfolio' : name + ' (100%)',
+              data: values,
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: isPortfolio ? 3.5 : 1.5,
+              borderDash: isPortfolio ? [] : [5, 3],
+              pointRadius: 0,
+            };
+          }),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { title: { display: true, text: 'Year' } },
+            y: { title: { display: true, text: 'Portfolio value ($)' }, ticks: { callback: v => '$' + v.toLocaleString() } },
+          },
+        },
+      });
+    </script>
+  {% endif %}
+
+  <script>
+    const inputs = document.querySelectorAll('.alloc input');
+    const totalCell = document.getElementById('total');
+    inputs.forEach(el => el.addEventListener('input', () => {
+      totalCell.textContent = [...inputs].reduce((s, e) => s + (parseFloat(e.value) || 0), 0) + '%';
+    }));
+  </script>
+{% endblock %}

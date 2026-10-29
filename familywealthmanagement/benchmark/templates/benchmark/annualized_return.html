@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Benchmark - Annualized Return{% endblock %}
+
+{% block head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    .chart { position: relative; height: 480px; }
+    label { margin-right: .5rem; }
+    table { border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { border: 1px solid #bbb; padding: 4px 10px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { background: #f0f0f0; }
+    form { display: flex; gap: 1.5rem; align-items: center; }
+    details { position: relative; }
+    summary { cursor: pointer; padding: 2px 8px; border: 1px solid #888; border-radius: 3px; user-select: none; }
+    .menu { position: absolute; z-index: 10; background: #fff; border: 1px solid #888; padding: .5rem; min-width: 280px; }
+    .bulk { display: flex; gap: .5rem; margin-bottom: .4rem; }
+    .menu label { display: block; margin: .25rem 0; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Annualized Return by Asset Class</h1>
+  <form method="get">
+    <label for="years">Rolling period:</label>
+    <select id="years" name="years" onchange="this.form.submit()">
+      {% for p in periods %}
+        <option value="{{ p }}" {% if p == years %}selected{% endif %}>{{ p }} year{{ p|pluralize }}</option>
+      {% endfor %}
+    </select>
+    <details>
+      <summary>Asset classes ({{ selected|length }} of {{ assets|length }})</summary>
+      <div class="menu">
+        <div class="bulk">
+          <button type="button" id="select-all">Select all</button>
+          <button type="button" id="unselect-all">Unselect all</button>
+        </div>
+        {% for a in assets %}
+          <label><input type="checkbox" name="asset" value="{{ a }}" {% if a in selected %}checked{% endif %}> {{ a }}</label>
+        {% endfor %}
+        <button type="submit">Apply</button>
+      </div>
+    </details>
+  </form>
+  <p>Annualized return (%) of the {{ years }}-year window ending in each year.</p>
+  <div class="chart"><canvas id="chart"></canvas></div>
+
+  {% if not selected %}<p>No asset classes selected. Open the "Asset classes" dropdown to choose some.</p>{% endif %}
+
+  {% if selected %}
+  <h2>Return and risk</h2>
+  <p>Average and standard deviation (sigma) of the {{ years }}-year annualized returns, in %.</p>
+  <table>
+    <thead><tr><th>Asset</th><th>Annualized return (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
+    <tbody>
+      {% for row in stats.rows %}
+        <tr><td>{{ row.asset }}</td><td>{{ row.mean }}</td><td>{{ row.sigma }}</td><td>{{ row.beta }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>Beta is measured against the S&amp;P 500 (includes dividends), which is 1 by definition.</p>
+
+  {% if selected|length > 1 %}
+  <h2>Correlation coefficient</h2>
+  <table>
+    <thead>
+      <tr><th></th>{% for h in selected_headers %}<th>{{ h }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for row in stats.correlation %}
+        <tr><th>{{ row.asset }}</th>{% for v in row.values %}<td>{{ v }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% endif %}
+
+  {{ data|json_script:"chart-data" }}
+  <script>
+    // Apply the asset selection when the dropdown is closed (click outside or on the summary).
+    const assetMenu = document.querySelector('details');
+    let assetsChanged = false;
+    assetMenu.addEventListener('change', () => { assetsChanged = true; });
+    assetMenu.addEventListener('toggle', () => {
+      if (!assetMenu.open && assetsChanged) assetMenu.closest('form').submit();
+    });
+    // Select / unselect every asset; applied when the dropdown closes, like any other change.
+    function setAllAssets(checked) {
+      assetMenu.querySelectorAll('input[name="asset"]').forEach(box => { box.checked = checked; });
+      assetsChanged = true;
+    }
+    document.getElementById('select-all').addEventListener('click', () => setAllAssets(true));
+    document.getElementById('unselect-all').addEventListener('click', () => setAllAssets(false));
+    document.addEventListener('click', (e) => {
+      if (assetMenu.open && !assetMenu.contains(e.target)) assetMenu.open = false;
+    });
+
+    const data = JSON.parse(document.getElementById('chart-data').textContent);
+    const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e6b800'];
+    // Bold dashed reference line at y = 0.
+    const zeroLine = {
+      id: 'zeroLine',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea, scales: { y } } = chart;
+        const py = y.getPixelForValue(0);
+        if (py < chartArea.top || py > chartArea.bottom) return;
+        ctx.save();
+        ctx.setLineDash([8, 5]);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000';
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, py);
+        ctx.lineTo(chartArea.right, py);
+        ctx.stroke();
+        ctx.restore();
+      },
+    };
+    new Chart(document.getElementById('chart'), {
+      plugins: [zeroLine],
+      type: 'line',
+      data: {
+        labels: data.years,
+        datasets: Object.entries(data.series).map(([name, values], i) => ({
+          label: name,
+          data: values,
+          borderColor: colors[i % colors.length],
+          backgroundColor: colors[i % colors.length],
+          borderWidth: 1.5,
+          pointRadius: 3.5,
+          pointHoverRadius: 6,
+          spanGaps: false,
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { title: { display: true, text: 'Year' } },
+          y: { title: { display: true, text: 'Annualized return (%)' } },
+        },
+      },
+    });
+  </script>
+{% endblock %}

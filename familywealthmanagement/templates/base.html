@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Family Wealth Management{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; }
+    nav { display: flex; gap: .25rem; padding: 0 2rem; background: #1f3a5f; }
+    nav a { color: #cfd8e6; text-decoration: none; padding: .8rem 1.2rem; }
+    nav a:hover { background: #2c4d7c; color: #fff; }
+    nav a.active { background: #fff; color: #1f3a5f; font-weight: 600; }
+    nav a.brand { color: #fff; font-weight: 700; padding-left: 0; margin-right: 1rem; }
+    nav a.brand:hover { background: none; }
+    main { margin: 2rem; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <a class="brand" href="{% url 'home' %}">Family Wealth Management</a>
+    <a href="{% url 'annualized_return' %}" {% if request.resolver_match.url_name == 'annualized_return' %}class="active"{% endif %}>Benchmark</a>
+    <a href="{% url 'asset_simulation' %}" {% if request.resolver_match.url_name == 'asset_simulation' %}class="active"{% endif %}>Simulation</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
