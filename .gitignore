@@ -1,0 +1,25 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+# Ignore internal venv subfolders inside familywealthmanagement
+familywealthmanagement/Include/
+familywealthmanagement/Lib/
+familywealthmanagement/Scripts/
+familywealthmanagement/share/
+familywealthmanagement/pyvenv.cfg
+
+# Ignore internal venv subfolders inside myworld
+myworld/Include/
+myworld/Lib/
+myworld/Scripts/
+myworld/share/
+myworld/pyvenv.cfg
+
+# Ignore internal venv subfolders inside test
+test/Include/
+test/Lib/
+test/Scripts/
+test/share/
+test/pyvenv.cfg
+
+# General Python caches
+__pycache__/
+*.pyc

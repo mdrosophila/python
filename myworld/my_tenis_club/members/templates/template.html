@@ -1,0 +1,27 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+  {% include "mymenu.html" with me="TOBIAS" sponsor="W3SCHOOLS" %}
+  <link rel="stylesheet" href="{% static 'myglobal.css' %}">
+
+<body>
+  <table border='1' >
+    <tr>
+      <th>ID</th>
+      <th>Firstname</th>
+      <th>Lastname</th>
+    </tr>
+    {% for x in mymembers %}
+      <tr>
+        <td>{{ x.id }}</td>
+          <td>{{ x.first_name }}</td>
+        <td>{{ x.last_name }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</body>
+<p>This page contains a footer in a template.</p>
+
+{% include 'footer.html' %} 
+</html>
