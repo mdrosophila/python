@@ -20,7 +20,7 @@
 
 {% block content %}
   <h1>Asset Simulation</h1>
-  <p>Backtest how an allocation would have grown using historical annual returns, rebalanced to the target weights every year.</p>
+  <p>Backtest how an allocation would have grown using historical annual returns. The portfolio is rebalanced to the target weights every year.</p>
 
   <form method="get">
     <div class="params">
@@ -60,7 +60,7 @@
       <thead><tr><th></th><th>Ending value ($)</th><th>Annualized return (%)</th><th>Worst year (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
       <tbody>
         {% for s in result.summary %}
-          <tr><td>{% if s.name == 'Portfolio' %}<strong>Portfolio</strong>{% else %}{{ s.name }} (100%){% endif %}</td>
+          <tr><td>{% if s.name|slice:":9" == 'Portfolio' %}<strong>{{ s.name }}</strong>{% else %}{{ s.name }} (100%){% endif %}</td>
               <td>{{ s.end_value|floatformat:"0g" }}</td><td>{{ s.cagr }}</td><td>{{ s.worst_year }}</td>
               <td>{{ s.sigma }}</td><td>{% if s.beta is None %}n/a{% else %}{{ s.beta }}{% endif %}</td></tr>
         {% endfor %}
@@ -78,10 +78,10 @@
         data: {
           labels: sim.labels,
           datasets: Object.entries(sim.series).map(([name, values]) => {
-            const isPortfolio = name === 'Portfolio';
+            const isPortfolio = name.startsWith('Portfolio');
             const color = isPortfolio ? '#111' : colors[i++ % colors.length];
             return {
-              label: isPortfolio ? 'Portfolio' : name + ' (100%)',
+              label: isPortfolio ? name : name + ' (100%)',
               data: values,
               borderColor: color,
               backgroundColor: color,

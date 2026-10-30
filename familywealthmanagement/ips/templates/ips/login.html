@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Log in{% endblock %}
+
+{% block head %}
+  <style>
+    form { max-width: 360px; }
+    .field { margin-bottom: .8rem; }
+    .field label { display: block; font-size: .9rem; margin-bottom: .2rem; }
+    .field input { width: 100%; box-sizing: border-box; padding: 4px; }
+    .errorlist { color: #b00020; margin: .2rem 0; padding-left: 1.2rem; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Log in</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% include "ips/_field.html" with field=form.username %}
+    {% include "ips/_field.html" with field=form.password %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit">Log in</button>
+  </form>
+  <p><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+  <p>No account yet? <a href="{% url 'register' %}">Register</a></p>
+{% endblock %}

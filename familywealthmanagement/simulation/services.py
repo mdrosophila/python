@@ -4,6 +4,7 @@ from benchmark.services.return_by_year import ASSET_COLUMNS, _load_returns
 
 ASSETS = [c.strip() for c in ASSET_COLUMNS]
 BENCHMARK = 'S&P 500 (includes dividends)'
+REBALANCED = 'Portfolio (rebalanced yearly)'
 
 
 def data_year_range() -> tuple:
@@ -14,9 +15,8 @@ def data_year_range() -> tuple:
 def simulate(weights: dict, start_year: int, years: int, initial: float) -> dict:
     """
     Backtest `initial` dollars over `years` calendar years starting in `start_year`, using the
-    historical annual returns. The portfolio (`weights`: asset -> fraction summing to 1) is
-    rebalanced back to its target weights every year. Each chosen asset is also run on its own
-    (100% allocation) for comparison.
+    historical annual returns. The portfolio (`weights`: asset -> fraction summing to 1) is rebalanced
+    back to its target weights every year. Each chosen asset is also run on its own (100% allocation) for comparison.
 
     Returns {'labels': [...], 'series': {name: [value at start, value after each year, ...]},
              'summary': [{'name', 'end_value', 'cagr', 'worst_year'}]}.
@@ -35,7 +35,7 @@ def simulate(weights: dict, start_year: int, years: int, initial: float) -> dict
             values.append(values[-1] * (1 + r))
         return values, yearly
 
-    runs = {'Portfolio': run(weights)}
+    runs = {REBALANCED: run(weights)}
     for asset in weights:
         runs[asset] = run({asset: 1.0})
 

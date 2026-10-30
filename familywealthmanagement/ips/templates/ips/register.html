@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block head %}
+  <style>
+    form { max-width: 480px; }
+    fieldset { margin: 0 0 1.5rem; border: 1px solid #bbb; padding: .5rem 1rem 1rem; }
+    legend { font-weight: 600; padding: 0 .4rem; }
+    .field { margin-bottom: .8rem; }
+    .field label { display: block; font-size: .9rem; margin-bottom: .2rem; }
+    .field input, .field textarea { width: 100%; box-sizing: border-box; padding: 4px; }
+    .help { color: #666; font-size: .8rem; }
+    .errorlist { color: #b00020; margin: .2rem 0; padding-left: 1.2rem; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Register</h1>
+  <form method="post">
+    {% csrf_token %}
+    <fieldset><legend>Account</legend>
+      {% for field in user_form %}{% include "ips/_field.html" %}{% endfor %}
+    </fieldset>
+    <fieldset><legend>Your details</legend>
+      {% for field in investor_form %}{% include "ips/_field.html" %}{% endfor %}
+    </fieldset>
+    <button type="submit">Create account</button>
+  </form>
+  <p>Already registered? <a href="{% url 'login' %}">Log in</a></p>
+{% endblock %}

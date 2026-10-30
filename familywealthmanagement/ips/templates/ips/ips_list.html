@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Investment Policy Statements{% endblock %}
+
+{% block head %}
+  <style>
+    table { border-collapse: collapse; margin: 1rem 0; }
+    th, td { border: 1px solid #bbb; padding: 4px 10px; text-align: left; }
+    thead th { background: #f0f0f0; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Investment Policy Statements</h1>
+  <p><a href="{% url 'ips_create' %}">+ New investment policy statement</a></p>
+  {% if statements %}
+    <table>
+      <thead><tr><th>Investor</th><th>Email</th><th>Phone</th><th>Risk tolerance</th><th>Required return (%)</th><th>Horizon (years)</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        {% for s in statements %}
+          <tr>
+            <td>{{ s.investor.name }}</td><td>{{ s.investor.email }}</td><td>{{ s.investor.phone }}</td>
+            <td>{{ s.get_risk_tolerance_display }}</td><td>{{ s.required_return_pct }}</td>
+            <td>{{ s.time_horizon_years }}</td><td>{{ s.created_at|date:"Y-m-d" }}</td>
+            <td><a href="{% url 'ips_detail' s.pk %}">View</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No investment policy statements yet.</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}New Investment Policy Statement{% endblock %}
+
+{% block head %}
+  <style>
+    form { max-width: 720px; }
+    fieldset { margin: 0 0 1.5rem; border: 1px solid #bbb; padding: .5rem 1rem 1rem; }
+    legend { font-weight: 600; padding: 0 .4rem; }
+    .field { margin-bottom: .8rem; }
+    .field label { display: block; font-size: .9rem; margin-bottom: .2rem; }
+    .field input, .field select, .field textarea { width: 100%; box-sizing: border-box; padding: 4px; }
+    .help { color: #666; font-size: .8rem; }
+    .errorlist { color: #b00020; margin: .2rem 0; padding-left: 1.2rem; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>New Investment Policy Statement</h1>
+  <p>For {{ investor.name }} ({{ investor.email }}). <a href="{% url 'profile' %}">Edit my details</a></p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <fieldset><legend>Risk tolerance</legend>
+      {% include "ips/_field.html" with field=form.risk_tolerance %}
+      {% include "ips/_field.html" with field=form.max_acceptable_loss_pct %}
+      {% include "ips/_field.html" with field=form.risk_notes %}
+    </fieldset>
+    <fieldset><legend>Return requirement</legend>
+      {% include "ips/_field.html" with field=form.required_return_pct %}
+      {% include "ips/_field.html" with field=form.return_notes %}
+    </fieldset>
+    <fieldset><legend>Tax considerations</legend>
+      {% include "ips/_field.html" with field=form.tax_bracket_pct %}
+      {% include "ips/_field.html" with field=form.tax_considerations %}
+    </fieldset>
+    <fieldset><legend>Time horizon</legend>
+      {% include "ips/_field.html" with field=form.time_horizon_years %}
+      {% include "ips/_field.html" with field=form.time_horizon_notes %}
+    </fieldset>
+    <fieldset><legend>Legal requirements</legend>
+      {% include "ips/_field.html" with field=form.legal_requirements %}
+    </fieldset>
+    <fieldset><legend>Liquidity needs</legend>
+      {% include "ips/_field.html" with field=form.liquidity_reserve_pct %}
+      {% include "ips/_field.html" with field=form.liquidity_needs %}
+    </fieldset>
+    <button type="submit">Save</button>
+    <a href="{% url 'ips_list' %}">Cancel</a>
+  </form>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Investment Policy Statement{% endblock %}
+
+{% block head %}
+  <style>
+    dl { max-width: 720px; }
+    dt { font-weight: 600; margin-top: .8rem; }
+    dd { margin: .2rem 0 0; white-space: pre-line; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Investment Policy Statement</h1>
+  <p>{{ ips.investor.name }} &middot; {{ ips.investor.email }} &middot; {{ ips.investor.phone }} &middot; created {{ ips.created_at|date:"Y-m-d" }}</p>
+  {% if ips.investor.mailing_address %}<p style="white-space: pre-line">{{ ips.investor.mailing_address }}</p>{% endif %}
+
+  <h2>Risk tolerance</h2>
+  <dl>
+    <dt>Risk tolerance</dt><dd>{{ ips.get_risk_tolerance_display }}</dd>
+    <dt>Maximum acceptable one-year loss</dt><dd>{{ ips.max_acceptable_loss_pct }}%</dd>
+    {% if ips.risk_notes %}<dt>Notes</dt><dd>{{ ips.risk_notes }}</dd>{% endif %}
+  </dl>
+  <h2>Return requirement</h2>
+  <dl>
+    <dt>Required annual return</dt><dd>{{ ips.required_return_pct }}%</dd>
+    {% if ips.return_notes %}<dt>Notes</dt><dd>{{ ips.return_notes }}</dd>{% endif %}
+  </dl>
+  <h2>Tax considerations</h2>
+  <dl>
+    {% if ips.tax_bracket_pct is not None %}<dt>Marginal tax rate</dt><dd>{{ ips.tax_bracket_pct }}%</dd>{% endif %}
+    <dt>Considerations</dt><dd>{{ ips.tax_considerations|default:"None" }}</dd>
+  </dl>
+  <h2>Time horizon</h2>
+  <dl>
+    <dt>Years</dt><dd>{{ ips.time_horizon_years }}</dd>
+    {% if ips.time_horizon_notes %}<dt>Notes</dt><dd>{{ ips.time_horizon_notes }}</dd>{% endif %}
+  </dl>
+  <h2>Legal requirements</h2>
+  <dl><dd>{{ ips.legal_requirements|default:"None" }}</dd></dl>
+  <h2>Liquidity needs</h2>
+  <dl>
+    <dt>Liquidity reserve</dt><dd>{{ ips.liquidity_reserve_pct }}% of portfolio</dd>
+    <dt>Needs</dt><dd>{{ ips.liquidity_needs|default:"None" }}</dd>
+  </dl>
+  <p><a href="{% url 'ips_list' %}">&larr; All statements</a></p>
+{% endblock %}

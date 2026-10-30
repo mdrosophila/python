@@ -30,6 +30,10 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'ips_list'
+LOGOUT_REDIRECT_URL = 'home'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'benchmark',
     'simulation',
+    'ips',
 ]
 
 MIDDLEWARE = [

@@ -18,9 +18,13 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from ips import urls as ips_urls
+
 urlpatterns = [
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
     path('admin/', admin.site.urls),
     path('benchmark/', include('benchmark.urls')),
     path('simulation/', include('simulation.urls')),
+    path('ips/', include('ips.urls')),
+    path('accounts/', include(ips_urls.account_urlpatterns)),
 ]
