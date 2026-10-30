@@ -30,6 +30,8 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+AUTHENTICATION_BACKENDS = ['ips.backends.IdentifierBackend']
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'ips_list'
 LOGOUT_REDIRECT_URL = 'home'

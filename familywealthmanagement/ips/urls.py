@@ -2,6 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
+from .forms import LoginForm
 
 urlpatterns = [
     path('', views.ips_list, name='ips_list'),
@@ -11,7 +12,7 @@ urlpatterns = [
 
 # Mounted under /accounts/ in config/urls.py.
 account_urlpatterns = [
-    path('login/', auth_views.LoginView.as_view(template_name='ips/login.html'), name='login'),
+    path('login/', auth_views.LoginView.as_view(template_name='ips/login.html', authentication_form=LoginForm), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('register/', views.register, name='register'),
     path('profile/', views.profile, name='profile'),

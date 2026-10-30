@@ -5,6 +5,33 @@ from django.core import mail
 from django.test import TestCase
 
 
+class LoginIdentifierTests(TestCase):
+    def setUp(self):
+        self.client.post('/accounts/register/', dict(
+            username='alice', password1='Sup3r-secret-pw', password2='Sup3r-secret-pw',
+            name='Alice', email='Alice@X.com', phone='(555) 111-2222', mailing_address=''))
+        self.client.post('/accounts/logout/')
+
+    def login(self, identifier, password='Sup3r-secret-pw'):
+        self.client.post('/accounts/logout/')
+        self.client.post('/accounts/login/', {'username': identifier, 'password': password})
+        return '_auth_user_id' in self.client.session
+
+    def test_username_email_and_phone_all_work(self):
+        for identifier in ('alice', 'alice@x.com', ' ALICE@x.com ', '5551112222', '555-111-2222'):
+            self.assertTrue(self.login(identifier), identifier)
+
+    def test_wrong_password_or_unknown_identifier_fails(self):
+        self.assertFalse(self.login('alice@x.com', 'wrong'))
+        self.assertFalse(self.login('5551112222', 'wrong'))
+        self.assertFalse(self.login('nobody@x.com'))
+        self.assertFalse(self.login('5550000000'))
+
+    def test_inactive_user_cannot_log_in(self):
+        User.objects.filter(username='alice').update(is_active=False)
+        self.assertFalse(self.login('alice@x.com'))
+
+
 class PasswordResetTests(TestCase):
     def setUp(self):
         self.client.post('/accounts/register/', dict(

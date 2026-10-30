@@ -1,8 +1,12 @@
-import re
-
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 
 from .models import Investor, InvestmentPolicyStatement
+from .utils import normalize_phone
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(label='Username, email or phone number', max_length=254)
 
 
 class InvestorForm(forms.ModelForm):
@@ -19,11 +23,10 @@ class InvestorForm(forms.ModelForm):
         return self.cleaned_data['email'].lower()
 
     def clean_phone(self):
-        raw = self.cleaned_data['phone']
-        digits = re.sub(r'\D', '', raw)
-        if not 7 <= len(digits) <= 15:
+        phone = normalize_phone(self.cleaned_data['phone'])
+        if phone is None:
             raise forms.ValidationError('Enter a valid phone number.')
-        return ('+' if raw.strip().startswith('+') else '') + digits
+        return phone
 
 
 class IPSForm(forms.ModelForm):
