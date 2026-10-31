@@ -29,6 +29,14 @@
         <option value="{{ p }}" {% if p == years %}selected{% endif %}>{{ p }} year{{ p|pluralize }}</option>
       {% endfor %}
     </select>
+    <label for="basis">Returns:</label>
+    <select id="basis" name="basis" onchange="this.form.submit()">
+      <option value="nominal" {% if not real %}selected{% endif %}>Nominal</option>
+      <option value="real" {% if real %}selected{% endif %}>Real (inflation-adjusted)</option>
+    </select>
+    <label for="lookback">Look back (years):</label>
+    <input id="lookback" type="number" name="lookback" value="{{ lookback }}" min="1" placeholder="all" style="width: 5rem"
+           onchange="this.form.submit()">
     <details>
       <summary>Asset classes ({{ selected|length }} of {{ assets|length }})</summary>
       <div class="menu">
@@ -43,25 +51,25 @@
       </div>
     </details>
   </form>
-  <p>Annualized return (%) of the {{ years }}-year window ending in each year.</p>
+  <p>{% if real %}Real{% else %}Nominal{% endif %} annualized (compound) return (%) of the {{ years }}-year window ending in each year.</p>
   <div class="chart"><canvas id="chart"></canvas></div>
 
-  {% if not selected %}<p>No asset classes selected. Open the "Asset classes" dropdown to choose some.</p>{% endif %}
+  {% if error %}<p style="color: #b00020">{{ error }}</p>{% elif not selected %}<p>No asset classes selected. Open the "Asset classes" dropdown to choose some.</p>{% endif %}
 
-  {% if selected %}
-  <h2>Return and risk</h2>
-  <p>Average and standard deviation (sigma) of the {{ years }}-year annualized returns, in %.</p>
+  {% if stats %}
+  <h2>Risk</h2>
+  <p>Annualized returns are the compound annual return over {{ stats.period }}. Sigma and beta are of the {{ years }}-year {% if real %}real{% else %}nominal{% endif %} annualized returns, in %.</p>
   <table>
-    <thead><tr><th>Asset</th><th>Annualized return (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
+    <thead><tr><th>Asset</th><th>Annualized nominal return (%)</th><th>Annualized real return (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
     <tbody>
       {% for row in stats.rows %}
-        <tr><td>{{ row.asset }}</td><td>{{ row.mean }}</td><td>{{ row.sigma }}</td><td>{{ row.beta }}</td></tr>
+        <tr><td>{{ row.asset }}</td><td>{{ row.nominal }}</td><td>{{ row.real }}</td><td>{{ row.sigma }}</td><td>{{ row.beta }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
   <p>Beta is measured against the S&amp;P 500 (includes dividends), which is 1 by definition.</p>
 
-  {% if selected|length > 1 %}
+  {% if selected_headers|length > 1 %}
   <h2>Correlation coefficient</h2>
   <table>
     <thead>
@@ -75,6 +83,19 @@
   </table>
   {% endif %}
   {% endif %}
+
+  <h2>Compound annual return (%)</h2>
+  <p>Geometric average over each period: the constant yearly rate that grows $1 into what it actually became. Real returns are adjusted for inflation.</p>
+  {% for basis, rows in compound_tables.items %}
+    <table>
+      <thead><tr><th>{% if basis == 'real' %}Real{% else %}Nominal{% endif %}</th>{% for a in assets %}<th>{{ a }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr><td>{{ row.label }}</td>{% for v in row.values %}<td>{{ v }}</td>{% endfor %}</tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endfor %}
 
   {{ data|json_script:"chart-data" }}
   <script>
@@ -138,7 +159,7 @@
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { title: { display: true, text: 'Year' } },
-          y: { title: { display: true, text: 'Annualized return (%)' } },
+          y: { title: { display: true, text: '{% if real %}Real{% else %}Nominal{% endif %} annualized return (%)' } },
         },
       },
     });

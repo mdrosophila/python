@@ -27,11 +27,20 @@
       <label>Starting amount ($)
         <input type="number" name="initial" value="{{ initial }}" min="1" step="any">
       </label>
+      <label>Look back (years)
+        <input type="number" name="lookback" value="{{ lookback }}" min="1" placeholder="all">
+      </label>
       <label>Start year ({{ first_year }}-{{ last_year }})
         <input type="number" name="start" value="{{ start }}" min="{{ first_year }}" max="{{ last_year }}">
       </label>
       <label>Years
         <input type="number" name="years" value="{{ years }}" min="1" max="{{ max_years }}">
+      </label>
+      <label>Returns
+        <select name="basis">
+          <option value="nominal" {% if not real %}selected{% endif %}>Nominal</option>
+          <option value="real" {% if real %}selected{% endif %}>Real (inflation-adjusted)</option>
+        </select>
       </label>
     </div>
 
@@ -52,21 +61,21 @@
   {% endif %}
 
   {% if result %}
-    <h2>Growth of ${{ initial }}</h2>
+    <h2>Growth of ${{ initial }}{% if real %} (in {{ start }} dollars, after inflation){% endif %}</h2>
     <div class="chart"><canvas id="chart"></canvas></div>
 
     <h2>Results</h2>
     <table>
-      <thead><tr><th></th><th>Ending value ($)</th><th>Annualized return (%)</th><th>Worst year (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
+      <thead><tr><th></th><th>Ending value ($)</th><th>Annualized return, nominal (%)</th><th>Annualized return, real (%)</th><th>Worst year (%)</th><th>Sigma (%)</th><th>Beta</th></tr></thead>
       <tbody>
         {% for s in result.summary %}
           <tr><td>{% if s.name|slice:":9" == 'Portfolio' %}<strong>{{ s.name }}</strong>{% else %}{{ s.name }} (100%){% endif %}</td>
-              <td>{{ s.end_value|floatformat:"0g" }}</td><td>{{ s.cagr }}</td><td>{{ s.worst_year }}</td>
+              <td>{{ s.end_value|floatformat:"0g" }}</td><td>{{ s.cagr_nominal }}</td><td>{{ s.cagr_real }}</td><td>{{ s.worst_year }}</td>
               <td>{{ s.sigma }}</td><td>{% if s.beta is None %}n/a{% else %}{{ s.beta }}{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    <p>Sigma is the standard deviation of the yearly returns. Beta is measured against the S&amp;P 500 (includes dividends), which is 1 by definition; it needs at least 2 years.</p>
+    <p>Annualized returns are compound (geometric) rates; real returns are adjusted for inflation. Ending value, worst year, sigma and beta use the {% if real %}real{% else %}nominal{% endif %} returns. Sigma is the standard deviation of the yearly returns. Beta is measured against the S&amp;P 500 (includes dividends), which is 1 by definition; it needs at least 2 years.</p>
 
     {{ result|json_script:"sim-data" }}
     <script>
@@ -97,7 +106,7 @@
           interaction: { mode: 'index', intersect: false },
           scales: {
             x: { title: { display: true, text: 'Year' } },
-            y: { title: { display: true, text: 'Portfolio value ($)' }, ticks: { callback: v => '$' + v.toLocaleString() } },
+            y: { title: { display: true, text: '{% if real %}Real portfolio value ($){% else %}Portfolio value ($){% endif %}' }, ticks: { callback: v => '$' + v.toLocaleString() } },
           },
         },
       });

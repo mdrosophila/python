@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}New Investment Policy Statement{% endblock %}
+{% block title %}{% if editing %}Edit{% else %}New{% endif %} Investment Policy Statement{% endblock %}
 
 {% block head %}
   <style>
@@ -16,8 +16,8 @@
 {% endblock %}
 
 {% block content %}
-  <h1>New Investment Policy Statement</h1>
-  <p>For {{ investor.name }} ({{ investor.email }}). <a href="{% url 'profile' %}">Edit my details</a></p>
+  <h1>{% if editing %}Edit{% else %}New{% endif %} Investment Policy Statement</h1>
+  <p>For {{ investor.name }} ({{ investor.email }}).{% if not editing %} <a href="{% url 'profile' %}">Edit my details</a>{% endif %}</p>
   <form method="post">
     {% csrf_token %}
     {{ form.non_field_errors }}
@@ -46,6 +46,6 @@
       {% include "ips/_field.html" with field=form.liquidity_needs %}
     </fieldset>
     <button type="submit">Save</button>
-    <a href="{% url 'ips_list' %}">Cancel</a>
+    <a href="{% if editing %}{% url 'ips_detail' ips.pk %}{% else %}{% url 'ips_list' %}{% endif %}">Cancel</a>
   </form>
 {% endblock %}

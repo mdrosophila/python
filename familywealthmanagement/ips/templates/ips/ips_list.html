@@ -22,7 +22,7 @@
             <td>{{ s.investor.name }}</td><td>{{ s.investor.email }}</td><td>{{ s.investor.phone }}</td>
             <td>{{ s.get_risk_tolerance_display }}</td><td>{{ s.required_return_pct }}</td>
             <td>{{ s.time_horizon_years }}</td><td>{{ s.created_at|date:"Y-m-d" }}</td>
-            <td><a href="{% url 'ips_detail' s.pk %}">View</a></td>
+            <td><a href="{% url 'ips_detail' s.pk %}">View</a> &middot; <a href="{% url 'ips_edit' s.pk %}">Edit</a></td>
           </tr>
         {% endfor %}
       </tbody>

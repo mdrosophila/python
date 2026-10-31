@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Matching portfolio{% endblock %}
+
+{% block head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    .chart { position: relative; height: 420px; }
+    table { border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { border: 1px solid #bbb; padding: 4px 10px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { background: #f0f0f0; }
+    .warn { color: #b00020; }
+    .ok { color: #1b7f3b; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Matching portfolio</h1>
+  <p>For {{ ips.investor.name }} &middot; {{ ips.get_risk_tolerance_display }} &middot; needs {{ ips.required_return_pct }}% a year over {{ ips.time_horizon_years }} years &middot;
+    <a href="{% url 'ips_detail' ips.pk %}">view statement</a></p>
+
+  <form method="get">
+    <label>Look back (years) <input type="number" name="lookback" value="{{ lookback }}" min="1" placeholder="all" style="width: 5rem"></label>
+    <input type="hidden" name="initial" value="{{ initial }}">
+    <button type="submit">Update</button>
+    <span class="help">Only the most recent years of market history are used to build and test the portfolio. Leave blank to use all of it.</span>
+  </form>
+
+  {% if not portfolio.weights %}
+    <p class="warn">No allocation fits this statement: none of the tested mixes keeps the worst year within
+      {{ portfolio.limits.max_loss }}% loss and the volatility cap for this risk tolerance (sigma {{ portfolio.limits.sigma_cap }}%) while holding
+      {{ portfolio.limits.cash_floor }}% in cash. Loosen the loss limit or lower the liquidity reserve and try again.</p>
+  {% else %}
+    <h2>Recommended allocation</h2>
+    <table>
+      <thead><tr><th>Asset</th><th>Weight (%)</th></tr></thead>
+      <tbody>{% for asset, pct in portfolio.weights.items %}<tr><td>{{ asset }}</td><td>{{ pct }}</td></tr>{% endfor %}</tbody>
+    </table>
+
+    <p>{% if portfolio.meets_return %}
+      <span class="ok">Meets the required return</span> with the lowest risk among the mixes that do.
+    {% else %}
+      <span class="warn">The required return of {{ ips.required_return_pct }}% is not reachable inside your risk limits.</span>
+      This is the highest-return mix that stays within them.
+    {% endif %}</p>
+
+    <table>
+      <thead><tr><th>Historical, rebalanced yearly</th><th>Portfolio</th><th>Limit from statement</th></tr></thead>
+      <tbody>
+        <tr><td>Annualized return (%)</td><td>{{ portfolio.stats.cagr }}</td><td>&ge; {{ ips.required_return_pct }}</td></tr>
+        <tr><td>Sigma (%)</td><td>{{ portfolio.stats.sigma }}</td><td>&le; {{ portfolio.limits.sigma_cap }} ({{ ips.get_risk_tolerance_display }})</td></tr>
+        <tr><td>Worst year (%)</td><td>{{ portfolio.stats.worst }}</td><td>&ge; &minus;{{ portfolio.limits.max_loss }}</td></tr>
+        <tr><td>Cash (T-bill) weight (%)</td><td>{{ portfolio.cash }}</td><td>&ge; {{ portfolio.limits.cash_floor }}</td></tr>
+        <tr><td>{{ ips.time_horizon_years }}-year windows reaching the required return</td><td>{% if portfolio.success_rate is None %}n/a (look-back is shorter than the horizon){% else %}{{ portfolio.success_rate }}%{% endif %}</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Backtest of the last {{ years }} years</h2>
+    <form method="get"><label>Starting amount ($) <input type="number" name="initial" value="{{ initial }}" min="1" step="any"></label>
+      <input type="hidden" name="lookback" value="{{ lookback }}">
+      <button type="submit">Update</button></form>
+    <div class="chart"><canvas id="chart"></canvas></div>
+    <p><a href="{{ simulator_link }}">Open in the simulator &rarr;</a></p>
+
+    {{ result|json_script:"sim-data" }}
+    <script>
+      const sim = JSON.parse(document.getElementById('sim-data').textContent);
+      const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e6b800'];
+      let i = 0;
+      new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+          labels: sim.labels,
+          datasets: Object.entries(sim.series).map(([name, values]) => {
+            const isPortfolio = name.startsWith('Portfolio');
+            const color = isPortfolio ? '#111' : colors[i++ % colors.length];
+            return { label: isPortfolio ? name : name + ' (100%)', data: values, borderColor: color, backgroundColor: color,
+                     borderWidth: isPortfolio ? 3.5 : 1.5, borderDash: isPortfolio ? [] : [5, 3], pointRadius: 0 };
+          }),
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+          scales: { y: { ticks: { callback: v => '$' + v.toLocaleString() } } },
+        },
+      });
+    </script>
+  {% endif %}
+
+  <p>Built from historical annual returns, so it is a guide, not a guarantee. Tax rate and legal restrictions in the statement are not applied automatically; review them before investing.</p>
+{% endblock %}

@@ -8,6 +8,8 @@ urlpatterns = [
     path('', views.ips_list, name='ips_list'),
     path('new/', views.ips_create, name='ips_create'),
     path('<int:pk>/', views.ips_detail, name='ips_detail'),
+    path('<int:pk>/edit/', views.ips_edit, name='ips_edit'),
+    path('<int:pk>/portfolio/', views.ips_portfolio, name='ips_portfolio'),
 ]
 
 # Mounted under /accounts/ in config/urls.py.

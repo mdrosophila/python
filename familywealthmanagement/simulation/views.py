@@ -1,5 +1,7 @@
 from django.shortcuts import render
 
+from benchmark.services.return_by_year import parse_lookback
+
 from .services import ASSETS, data_year_range, simulate
 
 DEFAULT_ALLOCATION = {'S&P 500 (includes dividends)': 60, 'US T. Bond (10-year)': 40}
@@ -15,7 +17,8 @@ def _number(value, default, cast=float):
 
 
 def asset_simulation(request):
-    first_year, last_year = data_year_range()
+    lookback = parse_lookback(request.GET.get('lookback'))
+    first_year, last_year = data_year_range(lookback)
     submitted = 'years' in request.GET
 
     years = _number(request.GET.get('years'), DEFAULT_YEARS, int)
@@ -25,6 +28,8 @@ def asset_simulation(request):
         alloc = [max(_number(request.GET.get(f'alloc_{i}'), 0.0), 0.0) for i in range(len(ASSETS))]
     else:
         alloc = [float(DEFAULT_ALLOCATION.get(a, 0)) for a in ASSETS]
+
+    real = request.GET.get('basis') == 'real'
 
     errors = []
     if years < 1:
@@ -41,17 +46,19 @@ def asset_simulation(request):
     result = None
     if not errors:
         weights = {a: pct / 100 for a, pct in zip(ASSETS, alloc) if pct > 0}
-        result = simulate(weights, start, years, initial)
+        result = simulate(weights, start, years, initial, real)
 
     return render(request, 'simulation/asset_simulation.html', {
         'rows': [{'index': i, 'name': a, 'pct': f'{pct:g}'} for i, (a, pct) in enumerate(zip(ASSETS, alloc))],
         'total': f'{total:g}',
         'years': years,
+        'real': real,
         'start': start,
         'initial': f'{initial:g}',
         'first_year': first_year,
         'last_year': last_year,
         'max_years': last_year - first_year + 1,
+        'lookback': lookback or '',
         'errors': errors,
         'result': result,
     })

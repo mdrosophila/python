@@ -43,5 +43,7 @@
     <dt>Liquidity reserve</dt><dd>{{ ips.liquidity_reserve_pct }}% of portfolio</dd>
     <dt>Needs</dt><dd>{{ ips.liquidity_needs|default:"None" }}</dd>
   </dl>
+  <p><a href="{% url 'ips_edit' ips.pk %}">Edit this statement</a></p>
+  <p><a href="{% url 'ips_portfolio' ips.pk %}"><strong>Build matching portfolio &rarr;</strong></a></p>
   <p><a href="{% url 'ips_list' %}">&larr; All statements</a></p>
 {% endblock %}

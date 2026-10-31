@@ -8,6 +8,9 @@ import numpy as np
 ASSET_COLUMNS = ['S&P 500 (includes dividends)', 'US Small cap (bottom decile)', '3-month T.Bill', 'US T. Bond (10-year)', ' Baa Corporate Bond', 'Real Estate', 'Gold*']
 PERIODS = [1, 3, 5, 10, 20, 30]
 BENCHMARK = 'S&P 500 (includes dividends)'
+INFLATION = 'Inflation Rate'
+# Number of most recent years in each row of the compound-return table (None = all the data).
+COMPOUND_WINDOWS = [None, 50, 10]
 
 #define setup function to calculate return by year
 def get_return_by_year() -> pd.DataFrame:
@@ -24,7 +27,7 @@ def get_return_by_year() -> pd.DataFrame:
     #define setup
     file_path = Path(__file__).resolve().parent.parent / 'data' / 'histretSP.xls'
     target_sheet = 'Returns by year'
-    target_column = ['Year', 'S&P 500 (includes dividends)', 'US Small cap (bottom decile)', '3-month T.Bill', 'US T. Bond (10-year)', ' Baa Corporate Bond', 'Real Estate', 'Gold*']
+    target_column = ['Year', 'S&P 500 (includes dividends)', 'US Small cap (bottom decile)', '3-month T.Bill', 'US T. Bond (10-year)', ' Baa Corporate Bond', 'Real Estate', 'Gold*', INFLATION]
     header_row = 19
     nrows = 98
 
@@ -99,24 +102,59 @@ def _load_returns() -> pd.DataFrame:
     return get_return_by_year()
 
 
-def _annualized_frame(years: int) -> pd.DataFrame:
-    """Rolling annualized return (in %) per asset, indexed by the window's end year."""
+def parse_lookback(raw):
+    """Number of most recent years to use, or None (all the data) if blank, invalid or longer than the data."""
+    try:
+        years = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return None if years < 1 or years >= len(_load_returns()) else years
+
+
+def asset_returns(real: bool = False, lookback: int = None) -> pd.DataFrame:
+    """
+    Yearly return of every asset class as a fraction, indexed by year, with stripped column names.
+    With `real=True` the returns are adjusted for inflation: (1 + nominal) / (1 + inflation) - 1.
+    With `lookback` only that many of the most recent years are kept.
+    """
     df = _load_returns()
-    growth = (1 + df[ASSET_COLUMNS]).rolling(years).apply(np.prod, raw=True)
-    annualized = (growth ** (1 / years) - 1) * 100
-    annualized.index = df['Year'].astype(int)
-    annualized.columns = [c.strip() for c in ASSET_COLUMNS]
-    return annualized.iloc[years - 1:]
+    frame = df[ASSET_COLUMNS].copy()
+    if real:
+        frame = (1 + frame).div(1 + df[INFLATION], axis=0) - 1
+    frame.index = df['Year'].astype(int)
+    frame.columns = [c.strip() for c in ASSET_COLUMNS]
+    return frame.iloc[-lookback:] if lookback else frame
 
 
-def get_annualized_returns(years: int) -> dict:
+def _annualized_frame(years: int, real: bool = False, lookback: int = None) -> pd.DataFrame:
+    """Rolling annualized (compound) return per asset in %, indexed by the window's end year."""
+    growth = (1 + asset_returns(real, lookback)).rolling(years).apply(np.prod, raw=True)
+    return ((growth ** (1 / years) - 1) * 100).iloc[years - 1:]
+
+
+def get_compound_returns(real: bool = False, lookback: int = None) -> list:
+    """
+    Compound annual return (%) of each asset over all the data, the last 50 years and the last 10 years:
+    [{'label': '1928-2025', 'values': [pct per asset, in ASSET_COLUMNS order]}, ...].
+    """
+    frame = asset_returns(real, lookback)
+    rows = []
+    for last_n in COMPOUND_WINDOWS:
+        window = frame if last_n is None else frame.iloc[-last_n:]
+        compound = (np.exp(np.log1p(window).mean()) - 1) * 100
+        rows.append({'label': f'{window.index[0]}-{window.index[-1]}',
+                     'values': [round(float(compound[a]), 2) for a in frame.columns]})
+    return rows
+
+
+def get_annualized_returns(years: int, real: bool = False, lookback: int = None) -> dict:
     """
     Rolling annualized return (in %) over `years` for every asset class.
 
     Returns {'years': [...], 'series': {asset_name: [value or None, ...]}}, where
     each value is the annualized return of the `years` window ending in that year.
     """
-    annualized = _annualized_frame(years)
+    annualized = _annualized_frame(years, real, lookback)
     return {
         'years': annualized.index.tolist(),
         'series': {
@@ -126,21 +164,19 @@ def get_annualized_returns(years: int) -> dict:
     }
 
 
-def get_statistics(years: int, assets: list) -> dict:
+def get_statistics(years: int, assets: list, real: bool = False, lookback: int = None) -> dict:
     """
-    Mean and sigma (population std dev, in %) of each asset's rolling annualized returns
+    Beta, sigma (population std dev, in %) of each asset's rolling annualized returns
     and the correlation matrix between the given assets, over the `years` rolling window.
     Correlations use the years where both assets have data.
     """
-    full = _annualized_frame(years)
+    full = _annualized_frame(years, real, lookback)
     annualized = full[assets]
     market = full[BENCHMARK]
     beta = {a: round(float(annualized[a].cov(market, ddof=0) / market.var(ddof=0)), 2) for a in assets}
     sigma = annualized.std(ddof=0)
-    mean = annualized.mean()
     corr = annualized.corr()
     return {
-        'mean': {a: round(float(mean[a]), 2) for a in assets},
         'beta': beta,
         'sigma': {a: round(float(sigma[a]), 2) for a in assets},
         'correlation': [

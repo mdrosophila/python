@@ -1,6 +1,8 @@
 from django.shortcuts import render
 
-from .services.return_by_year import ASSET_COLUMNS, PERIODS, get_annualized_returns, get_statistics
+from .services.return_by_year import (
+    ASSET_COLUMNS, PERIODS, get_annualized_returns, get_compound_returns, get_statistics,
+    parse_lookback)
 
 
 def annualized_return(request):
@@ -18,21 +20,36 @@ def annualized_return(request):
     else:
         selected = assets
 
-    data = get_annualized_returns(years)
-    data['series'] = {name: data['series'][name] for name in selected}
+    real = request.GET.get('basis') == 'real'
+    lookback = parse_lookback(request.GET.get('lookback'))
+    error = None
+    if lookback is not None and lookback < years:
+        error = f'The look-back ({lookback} years) must be at least the rolling period ({years} years).'
+    active = [] if error else selected
+    data = get_annualized_returns(years, real, lookback) if not error else {'years': [], 'series': {}}
+    data['series'] = {name: data['series'][name] for name in active}
     stats = None
-    if selected:
-        stats = get_statistics(years, selected)
+    if active:
+        stats = get_statistics(years, active, real, lookback)
+        # Compound annual return over all the data, nominal and real, for each asset.
+        compound = {basis: dict(zip(assets, get_compound_returns(basis == 'real', lookback)[0]['values']))
+                    for basis in ('nominal', 'real')}
+        stats['period'] = get_compound_returns(False, lookback)[0]['label']
         stats['rows'] = [
-            {'asset': a, 'mean': stats['mean'][a], 'sigma': stats['sigma'][a], 'beta': stats['beta'][a]}
-            for a in selected
+            {'asset': a, 'nominal': compound['nominal'][a], 'real': compound['real'][a],
+             'sigma': stats['sigma'][a], 'beta': stats['beta'][a]}
+            for a in active
         ]
     return render(request, 'benchmark/annualized_return.html', {
         'years': years,
+        'real': real,
+        'lookback': lookback or '',
+        'error': error,
+        'compound_tables': {'nominal': get_compound_returns(False), 'real': get_compound_returns(True)},
         'periods': PERIODS,
         'assets': assets,
         'selected': selected,
         'data': data,
         'stats': stats,
-        'selected_headers': selected,
+        'selected_headers': active,
     })
